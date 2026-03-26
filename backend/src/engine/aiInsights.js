@@ -73,7 +73,6 @@ function mockInsights(findings, inputType, riskLevel) {
   if (counts.api_key)      bullets.push(`${counts.api_key} API key(s) exposed — revoke and reissue.`);
   if (counts.private_key)  bullets.push('Private key detected — revoke and audit all dependent services.');
   if (counts.jwt_token)    bullets.push('JWT tokens in logs — add log scrubbing middleware.');
-  if (counts.bearer_token) bullets.push('Bearer tokens exposed — redact Authorization headers before logging.');
   if (counts.aws_key)      bullets.push('AWS key found — disable in IAM and check CloudTrail.');
   if (counts.stack_trace)  bullets.push('Stack traces leaked — suppress error details in production.');
   if (counts.credit_card)  bullets.push('Credit card numbers present — review PCI-DSS compliance.');

@@ -1,89 +1,53 @@
 import mammoth from 'mammoth';
-import libre from 'libreoffice-convert';
-import { promisify } from 'util';
+import { extractText } from 'unpdf';
 
-const { default: pdfParse } = await import('pdf-parse');
-const libreConvert = promisify(libre.convert);
-
-async function convertDocToDocx(buffer) {
-  try {
-    return await libreConvert(buffer, '.docx', undefined);
-  } catch (err) {
-    console.error('DOC → DOCX conversion error:', err.message);
-    throw new Error('Failed to convert .doc file. Make sure LibreOffice is installed.');
-  }
-}
-
-async function extractFromDocx(buffer) {
-  const result = await mammoth.extractRawText({ buffer });
-  return result.value;
-}
-
-async function extractContent(inputType, rawContent, fileMeta = {}) {
+async function extractContent(inputType, rawContent, fileBuffer = null, fileName = '') {
   switch (inputType) {
     case 'log':
-      return {
-        text: rawContent,
-        meta: { type: 'log', lineCount: rawContent.split('\n').length },
-      };
-
+      return { text: rawContent, meta: { type: 'log', lineCount: rawContent.split('\n').length } };
     case 'sql':
       return { text: rawContent, meta: { type: 'sql' } };
-
-    case 'file': {
-      const ext = (fileMeta.ext || '').toLowerCase();
-
-      if (ext === 'pdf') {
-        try {
-          const buffer = Buffer.isBuffer(rawContent)
-            ? rawContent
-            : Buffer.from(rawContent, 'binary');
-          const data = await pdfParse(buffer);
-          return {
-            text: data.text,
-            meta: { type: 'pdf', pages: data.numpages },
-          };
-        } catch (err) {
-          console.error('PDF parse error:', err.message);
-          throw new Error('Failed to parse PDF file.');
-        }
-      }
-
-      if (ext === 'docx') {
-        try {
-          const buffer = Buffer.isBuffer(rawContent)
-            ? rawContent
-            : Buffer.from(rawContent, 'binary');
-          const text = await extractFromDocx(buffer);
-          return { text, meta: { type: 'docx' } };
-        } catch (err) {
-          console.error('DOCX parse error:', err.message);
-          throw new Error('Failed to parse DOCX file.');
-        }
-      }
-
-      if (ext === 'doc') {
-        try {
-          const buffer = Buffer.isBuffer(rawContent)
-            ? rawContent
-            : Buffer.from(rawContent, 'binary');
-          // Convert .doc → .docx in memory, then extract text
-          const docxBuffer = await convertDocToDocx(buffer);
-          const text = await extractFromDocx(docxBuffer);
-          return { text, meta: { type: 'doc' } };
-        } catch (err) {
-          console.error('DOC parse error:', err.message);
-          throw new Error(err.message);
-        }
-      }
-
-      // .txt / .log uploaded as file — treat as plain text
-      return { text: rawContent, meta: { type: ext || 'text' } };
-    }
-
+    case 'file':
+      return extractFile(fileBuffer, fileName, rawContent);
+    case 'text':
+    case 'chat':
     default:
       return { text: rawContent, meta: { type: inputType } };
   }
+}
+
+async function extractFile(fileBuffer, fileName, fallbackText) {
+  const ext = fileName.split('.').pop().toLowerCase();
+  try {
+    if (ext === 'pdf') return extractPDF(fileBuffer, fileName);
+    if (ext === 'docx' || ext === 'doc') return extractDOCX(fileBuffer, fileName);
+    return {
+      text: fallbackText || fileBuffer?.toString('utf-8') || '',
+      meta: { type: 'file', ext, fileName },
+    };
+  } catch (err) {
+    console.error(`File extraction error (${ext}):`, err.message);
+    return { text: fallbackText || '', meta: { type: 'file', ext, fileName, extractionError: err.message } };
+  }
+}
+
+async function extractPDF(buffer, fileName) {
+  if (!buffer) throw new Error('No file buffer for PDF extraction');
+  const uint8Array = new Uint8Array(buffer);
+  const { text, totalPages } = await extractText(uint8Array, { mergePages: true });
+  return {
+    text,
+    meta: { type: 'pdf', fileName, pages: totalPages, wordCount: text.split(/\s+/).length },
+  };
+}
+
+async function extractDOCX(buffer, fileName) {
+  if (!buffer) throw new Error('No file buffer for DOCX extraction');
+  const result = await mammoth.extractRawText({ buffer });
+  return {
+    text: result.value,
+    meta: { type: 'docx', fileName, wordCount: result.value.split(/\s+/).length, warnings: result.messages?.length || 0 },
+  };
 }
 
 export { extractContent };

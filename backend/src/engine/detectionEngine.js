@@ -1,10 +1,9 @@
 const PATTERNS = [
-  { type: 'password',     risk: 'critical', regex: /(?:password|passwd|pwd)\s*[=:]\s*(\S+)/gi,                          capture: 1 },
+  { type: 'password', risk: 'critical', regex: /(?:password|passwd|pwd)\s*(?:=|:|is)\s*([^\s]+)/gi, capture: 1},
   { type: 'private_key',  risk: 'critical', regex: /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/g,                capture: 0 },
-  { type: 'api_key',      risk: 'high',     regex: /(?:api[_-]?key|secret[_-]?key|access[_-]?token)\s*[=:]\s*([A-Za-z0-9\-_.]{8,})/gi, capture: 1 },
-  { type: 'jwt_token',    risk: 'high',     regex: /eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/g, capture: 0 },
+  { type: 'api_token', risk: 'high', regex: /\bsk-[A-Za-z0-9\-]{6,}\b/g, capture: 0 },
+  { type: 'api_key',      risk: 'high',     regex: /(?:api[_-]?key|secret[_-]?key|access[_-]?token|token)\s*(?:=|:|is)\s*([A-Za-z0-9\-_.]{6,})/gi, capture: 1 },
   { type: 'aws_key',      risk: 'high',     regex: /\b(AKIA[0-9A-Z]{16})\b/g,                                          capture: 0 },
-  { type: 'bearer_token', risk: 'high',     regex: /Authorization:\s*Bearer\s+([A-Za-z0-9\-_.~+/]{10,})/gi,            capture: 1 },
   { type: 'ssn',          risk: 'high',     regex: /\b\d{3}-\d{2}-\d{4}\b/g,                                           capture: 0 },
   { type: 'stack_trace',  risk: 'medium',   regex: /(?:Exception|Error|Traceback|at\s+[\w$.]+\([\w.]+:\d+\))/gm,       capture: 0 },
   { type: 'credit_card',  risk: 'medium',   regex: /\b(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13})\b/g,capture: 0 },

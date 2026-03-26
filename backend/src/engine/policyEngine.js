@@ -18,12 +18,23 @@ function applyPolicy(text, findings, options = {}) {
 
 function maskContent(text) {
   const patterns = [
-    { regex: /(?:password|passwd|pwd)\s*[=:]\s*\S+/gi,              label: 'PASSWORD' },
-    { regex: /(?:api[_-]?key|secret[_-]?key|access[_-]?token)\s*[=:]\s*\S+/gi, label: 'API_KEY' },
-    { regex: /Authorization:\s*Bearer\s+\S+/gi,                      label: 'BEARER_TOKEN' },
-    { regex: /eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/g, label: 'JWT' },
-    { regex: /\b(AKIA[0-9A-Z]{16})\b/g,                              label: 'AWS_KEY' },
-  ];
+  {
+    regex: /(?:password|passwd|pwd)\s*(?:=|:|is)\s*[^\s]+/gi,
+    label: 'PASSWORD'
+  },
+  {
+    regex: /(?:api[_-]?key|secret[_-]?key|access[_-]?token|token)\s*(?:=|:|is)\s*[^\s]+/gi,
+    label: 'API_KEY'
+  },
+  {
+    regex: /\bsk-[A-Za-z0-9\-]{6,}\b/g,
+    label: 'API_TOKEN'
+  },
+  {
+    regex: /eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g,
+    label: 'JWT'
+  }
+];
   let masked = text;
   for (const { regex, label } of patterns) {
     masked = masked.replace(regex, `[REDACTED:${label}]`);
